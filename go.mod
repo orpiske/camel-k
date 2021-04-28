@@ -5,6 +5,7 @@ go 1.13
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Microsoft/hcsshim v0.8.15 // indirect
+	github.com/TwinProduction/go-color v1.0.0
 	github.com/apache/camel-k/pkg/apis/camel v0.0.0
 	github.com/apache/camel-k/pkg/client/camel v0.0.0
 	github.com/apache/camel-k/pkg/kamelet/repository v0.0.0

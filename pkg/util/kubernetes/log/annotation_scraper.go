@@ -20,15 +20,16 @@ package log
 import (
 	"bufio"
 	"context"
+	"github.com/TwinProduction/go-color"
+	klog "github.com/apache/camel-k/pkg/util/log"
 	"io"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"regexp"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	klog "github.com/apache/camel-k/pkg/util/log"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/client-go/kubernetes"
 )
@@ -141,6 +142,15 @@ func (s *SelectorScraper) addPodScraper(ctx context.Context, podName string, out
 			s.L.Error(err, "Cannot write to output")
 			return
 		}
+
+		// The regex below try to match the beginning of the log message (formed by the date, time and log level)
+		// 2021-04-28 12:35:53,190 INFO
+		debugRe := regexp.MustCompile("([0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{0,3}.)(TRACE|DEBUG)")
+		infoRe := regexp.MustCompile("([0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{0,3}.)(INFO)")
+		errorRe := regexp.MustCompile("([0-9]{4}-[0-9]{2}-[0-9]{2}.[0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{0,3}.)(ERROR|FATAL)")
+
+		//currentColor := color.White
+
 		for {
 			str, err := podReader.ReadString('\n')
 			if err == io.EOF {
@@ -149,10 +159,31 @@ func (s *SelectorScraper) addPodScraper(ctx context.Context, podName string, out
 				s.L.Error(err, "Cannot read from pod stream")
 				return
 			}
+
+			if debugRe.Match([]byte(str)) {
+				//out.WriteString(color.Yellow)
+				//currentColor = color.Yellow
+				str = debugRe.ReplaceAllString(str, "$1" + color.Colorize(color.Yellow, "$2"))
+
+			} else if infoRe.Match([]byte(str)) {
+				//out.WriteString(color.Blue)
+				//currentColor = color.Blue
+				str = infoRe.ReplaceAllString(str, "$1" + color.Colorize(color.Blue, "$2"))
+			} else if errorRe.Match([]byte(str)) {
+				//out.WriteString(color.Red)
+				//currentColor = color.Red
+				str = errorRe.ReplaceAllString(str, "$1" + color.Colorize(color.Red, "$2"))
+			} else {
+				//currentColor = color.White
+			}
+
+			//out.WriteString(currentColor)
+
 			if _, err := out.WriteString(prefix + str); err != nil {
 				s.L.Error(err, "Cannot write to output")
 				return
 			}
+
 			out.Flush()
 			if podCtx.Err() != nil {
 				return
