@@ -81,6 +81,19 @@ The above command produces a `camel-k` image with the name `docker.io/apache/cam
 make imgDestination='docker.io/myrepo' images
 ----
 
+
+[[building-on-Windows]]
+== Building On Windows
+
+To build Camel K on Windows, run:
+
+[source]
+----
+make -f script/Makefile
+----
+
+Note: this is offered as a convenience for contributors using Windows, but not entirely supported.
+
 [[testing]]
 == Testing
 

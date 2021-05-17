@@ -59,9 +59,25 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+ifeq ($(OS),Windows_NT)
+RMCOMMAND=rd -sq
+else
+RMCOMMAND=rm -rf
+endif
+
 # Build
 GOLDFLAGS += -X github.com/apache/camel-k/pkg/cmd/operator.GitCommit=$(GIT_COMMIT)
 GOFLAGS = -ldflags "$(GOLDFLAGS)" -trimpath
+
+# Scripts
+
+PATH_SEP := /
+ifeq ($(OS),Windows_NT)
+	SCRIPT_DIR := .\\script\\
+else
+	SCRIPT_DIR := ./script/
+endif
+BUILD_CATALOG := $(SCRIPT_DIR)build_catalog.sh
 
 define LICENSE_HEADER
 Licensed to the Apache Software Foundation (ASF) under one or more
@@ -123,24 +139,24 @@ codegen:
 generate: generate-deepcopy generate-crd generate-client generate-doc generate-json-schema generate-strimzi
 
 generate-client:
-	./script/gen_client.sh
+	$(SCRIPT_DIR)gen_client.sh
 
 generate-crd: controller-gen
-	CONTROLLER_GEN=$(CONTROLLER_GEN) ./script/gen_crd.sh
+	CONTROLLER_GEN=$(CONTROLLER_GEN) $(SCRIPT_DIR)gen_crd.sh
 
 generate-doc:
-	./script/gen_doc.sh
+	$(SCRIPT_DIR)gen_doc.sh
 
 generate-deepcopy: controller-gen
 	cd pkg/apis/camel && $(CONTROLLER_GEN) paths="./..." object
 
 generate-json-schema:
 	# Skip since the YAML DSL schema has been moved to apache/camel
-	#./script/gen_json_schema.sh $(RUNTIME_VERSION) $(STAGING_RUNTIME_REPO)
+	#$(SCRIPT_DIR)gen_json_schema.sh $(RUNTIME_VERSION) $(STAGING_RUNTIME_REPO)
 
 generate-strimzi:
 	cd addons/strimzi/duck && $(CONTROLLER_GEN) paths="./..." object
-	./script/gen_client_strimzi.sh
+	$(SCRIPT_DIR)gen_client_strimzi.sh
 
 build: build-resources build-kamel build-compile-integration-tests build-submodules
 
@@ -182,14 +198,15 @@ test-upgrade: build
 build-kamel:
 # Ensure the binary is statically linked when building on Linux due to ABI changes in newer glibc 2.32, otherwise
 # it would not run on older versions. See https://github.com/apache/camel-k/pull/2141#issuecomment-800990117
+
 ifeq ($(shell uname -s 2>/dev/null || echo Unknown),Linux)
-	CGO_ENABLED=0 go build $(GOFLAGS) -o kamel ./cmd/kamel/*.go
+	CGO_ENABLED=0 go build $(GOFLAGS) -o kamel ./cmd/kamel/main.go
 else
-	go build $(GOFLAGS) -o kamel ./cmd/kamel/*.go
+	go build $(GOFLAGS) -o kamel ./cmd/kamel/main.go
 endif
 
 build-resources:
-	./script/build_catalog.sh $(RUNTIME_VERSION) -Dcatalog.file=camel-catalog-$(RUNTIME_VERSION).yaml -Dcatalog.runtime=quarkus -Dstaging.repo="$(STAGING_RUNTIME_REPO)"
+	$(SCRIPT_DIR)build_catalog.sh $(RUNTIME_VERSION) -Dcatalog.file=camel-catalog-$(RUNTIME_VERSION).yaml -Dcatalog.runtime=quarkus -Dstaging.repo="$(STAGING_RUNTIME_REPO)"
 	go generate ./pkg/...
 
 bundle-kamelets:
@@ -199,10 +216,10 @@ ifneq (,$(findstring $(KAMELET_CATALOG_REPO_BRANCH), main))
 	@exit 1
 endif
 endif
-	./script/bundle_kamelets.sh $(KAMELET_CATALOG_REPO) $(KAMELET_CATALOG_REPO_BRANCH)
+	$(SCRIPT_DIR)bundle_kamelets.sh $(KAMELET_CATALOG_REPO) $(KAMELET_CATALOG_REPO_BRANCH)
 
 build-submodules:
-	./script/build_submodules.sh
+	$(SCRIPT_DIR)build_submodules.sh
 
 build-compile-integration-tests:
 	go test -c -tags="integration" ./e2e/common
@@ -214,16 +231,22 @@ clean:
 	#
 	#    https://github.com/golang/go/issues/31002
 	#
+ifeq ($(OS),Windows_NT)
+	set GO111MODULE=off
+	go clean
+else
 	GO111MODULE=off go clean
-	rm -f camel-k
-	rm -f kamel
-	rm -f *.test
-	rm -rf build/_maven_output
-	rm -rf build/_maven_overlay
-	rm -rf build/_output
-	rm -rf camel-k-client-*.tar.gz
-	rm -rf camel-k-examples-*.tar.gz
-	rm -rf bundle
+endif
+
+	$(RMCOMMAND) camel-k
+	$(RMCOMMAND) kamel
+	$(RMCOMMAND) *.test
+	$(RMCOMMAND) build/_maven_output
+	$(RMCOMMAND) build/_maven_overlay
+	$(RMCOMMAND) build/_output
+	$(RMCOMMAND) camel-k-client-*.tar.gz
+	$(RMCOMMAND) camel-k-examples-*.tar.gz
+	$(RMCOMMAND) bundle
 
 dep:
 	go mod tidy
@@ -236,17 +259,17 @@ lint-fix:
 
 
 check-licenses:
-	./script/check_licenses.sh
+	$(SCRIPT_DIR)check_licenses.sh
 
 maven-overlay:
 	mkdir -p build/_maven_overlay
-	./script/maven_overlay.sh build/_maven_overlay
+	$(SCRIPT_DIR)maven_overlay.sh build/_maven_overlay
 
 images: bundle-kamelets test maven-overlay
 	mkdir -p build/_maven_output
 	mkdir -p build/_output/bin
 ifneq ($(shell uname -s 2>/dev/null || echo Unknown),Linux)
-	GOOS=linux go build $(GOFLAGS) -o build/_output/bin/kamel ./cmd/kamel/*.go
+	GOOS=linux go build $(GOFLAGS) -o build/_output/bin/kamel ./cmd/kamel/main.go
 else
 	cp kamel build/_output/bin
 endif
@@ -256,7 +279,7 @@ images-dev: bundle-kamelets test package-artifacts maven-overlay
 	mkdir -p build/_maven_output
 	mkdir -p build/_output/bin
 ifneq ($(shell uname -s 2>/dev/null || echo Unknown),Linux)
-	GOOS=linux go build $(GOFLAGS) -o build/_output/bin/kamel ./cmd/kamel/*.go
+	GOOS=linux go build $(GOFLAGS) -o build/_output/bin/kamel ./cmd/kamel/main.go
 else
 	cp kamel build/_output/bin
 endif
@@ -276,25 +299,25 @@ get-last-released-version:
 	@echo $(LAST_RELEASED_VERSION)
 
 set-version:
-	./script/set_version.sh $(VERSION) $(IMAGE_NAME)
+	$(SCRIPT_DIR)set_version.sh $(VERSION) $(IMAGE_NAME)
 
 set-module-version:
-	./script/set_go_modules_version.sh $(VERSION)
+	$(SCRIPT_DIR)set_go_modules_version.sh $(VERSION)
 
 git-tag:
-	./script/git_tag.sh $(VERSION) $(RELEASE_GIT_REMOTE)
+	$(SCRIPT_DIR)git_tag.sh $(VERSION) $(RELEASE_GIT_REMOTE)
 
 cross-compile:
-	./script/cross_compile.sh $(VERSION) '$(GOFLAGS)'
+	$(SCRIPT_DIR)cross_compile.sh $(VERSION) '$(GOFLAGS)'
 
 package-examples:
-	./script/package_examples.sh $(VERSION)
+	$(SCRIPT_DIR)package_examples.sh $(VERSION)
 
 package-artifacts:
-	./script/package_maven_artifacts.sh $(RUNTIME_VERSION) $(PACKAGE_ARTIFACTS_STRATEGY) $(STAGING_RUNTIME_REPO)
+	$(SCRIPT_DIR)package_maven_artifacts.sh $(RUNTIME_VERSION) $(PACKAGE_ARTIFACTS_STRATEGY) $(STAGING_RUNTIME_REPO)
 
 unsnapshot-olm:
-	./script/unsnapshot_olm.sh
+	$(SCRIPT_DIR)unsnapshot_olm.sh
 
 release: clean codegen set-module-version set-version build-resources check-licenses unsnapshot-olm build images images-push cross-compile package-examples git-tag
 
@@ -303,17 +326,17 @@ release-staging: clean codegen set-module-version set-version build-resources ch
 release-nightly: clean codegen set-module-version set-version build-resources build images images-push cross-compile package-examples
 
 release-helm:
-	./script/release_helm.sh
+	$(SCRIPT_DIR)release_helm.sh
 
 install-crc:
-	./script/install_crc.sh $(VERSION)
+	$(SCRIPT_DIR)install_crc.sh $(VERSION)
 install-minishift:
-	./script/install_minishift.sh
+	$(SCRIPT_DIR)install_minishift.sh
 install-minikube:
-	./script/install_minikube.sh
+	$(SCRIPT_DIR)install_minikube.sh
 
 release-notes:
-	./script/gen_release_notes.sh $(LAST_RELEASED_VERSION) $(VERSION)
+	$(SCRIPT_DIR)gen_release_notes.sh $(LAST_RELEASED_VERSION) $(VERSION)
 
 get-staging-repo:
 	@echo $(or ${STAGING_RUNTIME_REPO},https://repository.apache.org/content/repositories/snapshots@id=apache-snapshots@snapshots)
@@ -329,7 +352,7 @@ ifeq (, $(shell which controller-gen))
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
 	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.1 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	$(RMCOMMAND) $$CONTROLLER_GEN_TMP_DIR ;\
 	}
 CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
@@ -344,7 +367,7 @@ ifeq (, $(shell which kustomize))
 	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
 	go mod init tmp ;\
 	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
+	$(RMCOMMAND) $$KUSTOMIZE_GEN_TMP_DIR ;\
 	}
 KUSTOMIZE=$(GOBIN)/kustomize
 else
@@ -361,16 +384,16 @@ BUNDLE_CAMEL_APIS = v1 v1alpha1
 
 $(BUNDLE_CAMEL_APIS):
 	@# Clean up api directory, copy over fresh version
-	rm -rf api_$@ && cp -rf pkg/apis api_$@
+	$(RMCOMMAND) api_$@ && cp -rf pkg/apis api_$@
 	@# Remove the camel directory and re-copy only the required api
-	rm -rf api_$@/camel/* && cp -rf pkg/apis/camel/$@ api_$@/camel/
+	$(RMCOMMAND) api_$@/camel/* && cp -rf pkg/apis/camel/$@ api_$@/camel/
 	@# operator-sdk generate ... cannot execute across separate modules so need to temporarily move api
 	operator-sdk generate kustomize manifests --apis-dir $(addprefix api_, $@) -q
 	@# Adds the licence header to the csv file.
-	./script/add_license.sh config/manifests ./script/headers/yaml.txt
-	./script/add_createdAt.sh config/manifests/bases
+	$(SCRIPT_DIR)add_license.sh config/manifests $(SCRIPT_DIR)headers/yaml.txt
+	$(SCRIPT_DIR)add_createdAt.sh config/manifests/bases
 	@# Clean up temporary working api directories
-	rm -rf api_*
+	$(RMCOMMAND) api_*
 
 bundle: generate-crd $(BUNDLE_CAMEL_APIS) kustomize
 	@# Build kustomize manifests
@@ -382,7 +405,7 @@ else
 	mv bundle.Dockerfile bundle/Dockerfile && sed -i 's/bundle\///g' bundle/Dockerfile
 endif
 	@# Adds the licence headers to the csv file
-	./script/add_license.sh bundle/manifests ./script/headers/yaml.txt
+	$(SCRIPT_DIR)add_license.sh bundle/manifests $(SCRIPT_DIR)headers/yaml.txt
 	operator-sdk bundle validate ./bundle
 
 #
@@ -390,9 +413,9 @@ endif
 # use 'make bundle' for newer bundle format
 #
 build-olm: generate-crd $(BUNDLE_CAMEL_APIS)
-	./script/build_olm.sh
+	$(SCRIPT_DIR)build_olm.sh
 	@# Adds the licence headers to the csv file
-	./script/add_license.sh deploy/olm-catalog/camel-k-dev ./script/headers/yaml.txt
+	$(SCRIPT_DIR)add_license.sh deploy/olm-catalog/camel-k-dev $(SCRIPT_DIR)headers/yaml.txt
 
 # Build the bundle image.
 bundle-build: bundle
