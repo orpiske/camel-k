@@ -26,7 +26,7 @@ const (
 	Version = "1.10.0-SNAPSHOT"
 
 	// DefaultRuntimeVersion --
-	DefaultRuntimeVersion = "1.13.0"
+	DefaultRuntimeVersion = "1.13.1-SNAPSHOT"
 
 	// BuildahVersion --
 	BuildahVersion = "1.23.3"
@@ -41,11 +41,11 @@ const (
 	LocalRepository = "/tmp/artifacts/m2"
 
 	// ImageName --
-	ImageName = "docker.io/apache/camel-k"
+	ImageName = "localhost:5000/apache/camel-k"
 
 	// installDefaultKamelets --
 	installDefaultKamelets = true
 )
 
-// GitCommit must be provided during application build
+//GitCommit must be provided during application build
 var GitCommit string
