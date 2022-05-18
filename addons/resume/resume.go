@@ -19,8 +19,12 @@ package resume
 
 import (
 	v1 "github.com/apache/camel-k/pkg/apis/camel/v1"
+	"github.com/apache/camel-k/pkg/metadata"
 	"github.com/apache/camel-k/pkg/trait"
 	"github.com/apache/camel-k/pkg/util"
+	"github.com/apache/camel-k/pkg/util/kubernetes"
+	"github.com/apache/camel-k/pkg/util/log"
+	"github.com/apache/camel-k/pkg/util/uri"
 )
 
 // The Resume trait can be used to manage and configure resume strategies
@@ -43,9 +47,10 @@ type resumeTrait struct {
 }
 
 const (
-	KafkaSingle  = "org.apache.camel.processor.resume.kafka.SingleNodeKafkaResumeStrategy"
-	KafkaMulti   = "org.apache.camel.processor.resume.kafka.MultiNodeKafkaResumeStrategy"
-	StrategyPath = "camel-k-offsets"
+	KafkaSingle   = "org.apache.camel.processor.resume.kafka.SingleNodeKafkaResumeStrategy"
+	KafkaMulti    = "org.apache.camel.processor.resume.kafka.MultiNodeKafkaResumeStrategy"
+	StrategyPath  = "camel-k-offsets"
+	fileComponent = "file"
 )
 
 func NewResumeTrait() trait.Trait {
@@ -64,6 +69,21 @@ func (r *resumeTrait) Configure(environment *trait.Environment) (bool, error) {
 	}
 
 	if trait.IsNilOrTrue(r.Auto) {
+		// Check which components have been used
+		sources, err := kubernetes.ResolveIntegrationSources(environment.Ctx, r.Client, environment.Integration, environment.Resources)
+		if err != nil {
+			return false, err
+		}
+
+		meta := metadata.ExtractAll(environment.CamelCatalog, sources)
+
+		for _, endpoint := range meta.FromURIs {
+			log.Infof("Processing component %s", endpoint)
+			if uri.GetComponent(endpoint) == fileComponent {
+				r.setupOffsetTypesForFileComponent(endpoint)
+			}
+		}
+
 		if r.ResumeStrategy == "" {
 			r.ResumeStrategy = KafkaSingle
 		}
@@ -74,6 +94,15 @@ func (r *resumeTrait) Configure(environment *trait.Environment) (bool, error) {
 	}
 
 	return r.Enabled != nil && *r.Enabled, nil
+}
+
+func (r *resumeTrait) setupOffsetTypesForFileComponent(endpoint string) {
+	r.OffsetKeyType = "file"
+	if uri.GetQueryParameter(endpoint, "fileName") != "" {
+		r.OffsetValueType = "long"
+	} else {
+		r.OffsetValueType = "file"
+	}
 }
 
 func (r *resumeTrait) Apply(environment *trait.Environment) error {
