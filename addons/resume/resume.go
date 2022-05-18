@@ -20,6 +20,7 @@ package resume
 import (
 	v1 "github.com/apache/camel-k/pkg/apis/camel/v1"
 	"github.com/apache/camel-k/pkg/trait"
+	"github.com/apache/camel-k/pkg/util"
 )
 
 // The Resume trait can be used to manage and configure resume strategies
@@ -76,6 +77,10 @@ func (r *resumeTrait) Configure(environment *trait.Environment) (bool, error) {
 }
 
 func (r *resumeTrait) Apply(environment *trait.Environment) error {
+	if environment.IntegrationInPhase(v1.IntegrationPhaseInitialization) {
+		util.StringSliceUniqueAdd(&environment.Integration.Status.Capabilities, v1.CapabilityResume)
+	}
+
 	if environment.IntegrationInRunningPhases() {
 		environment.ApplicationProperties["customizer.resume.enabled"] = "true"
 		environment.ApplicationProperties["customizer.resume.resumeStrategy"] = r.ResumeStrategy

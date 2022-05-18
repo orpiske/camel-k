@@ -304,6 +304,8 @@ const (
 	CapabilityTracing = "tracing"
 	// CapabilityMaster defines the master capability
 	CapabilityMaster = "master"
+	// CapabilityResume defines the resume capability
+	CapabilityResume = "resume"
 )
 
 // +kubebuilder:object:generate=false
