@@ -24,7 +24,6 @@ import (
 	"github.com/apache/camel-k/pkg/util"
 	"github.com/apache/camel-k/pkg/util/kubernetes"
 	"github.com/apache/camel-k/pkg/util/log"
-	"github.com/apache/camel-k/pkg/util/uri"
 )
 
 // The Resume trait can be used to manage and configure resume strategies
@@ -41,9 +40,8 @@ type resumeTrait struct {
 	// The path used by the resume strategy (this is specific to the resume strategy type)
 	ResumePath string `property:"resume-path,omitempty"`
 	// The data type of the offset value
-	OffsetKeyType string `property:"offset-key-type,omitempty"`
-	// The data type of the offset value
-	OffsetValueType string `property:"offset-value-type,omitempty"`
+	// The path used by the resume strategy (this is specific to the resume strategy type)
+	ResumeServer string `property:"resume-server,omitempty"`
 }
 
 const (
@@ -79,9 +77,6 @@ func (r *resumeTrait) Configure(environment *trait.Environment) (bool, error) {
 
 		for _, endpoint := range meta.FromURIs {
 			log.Infof("Processing component %s", endpoint)
-			if uri.GetComponent(endpoint) == fileComponent {
-				r.setupOffsetTypesForFileComponent(endpoint)
-			}
 		}
 
 		if r.ResumeStrategy == "" {
@@ -96,15 +91,6 @@ func (r *resumeTrait) Configure(environment *trait.Environment) (bool, error) {
 	return r.Enabled != nil && *r.Enabled, nil
 }
 
-func (r *resumeTrait) setupOffsetTypesForFileComponent(endpoint string) {
-	r.OffsetKeyType = "file"
-	if uri.GetQueryParameter(endpoint, "fileName") != "" {
-		r.OffsetValueType = "long"
-	} else {
-		r.OffsetValueType = "file"
-	}
-}
-
 func (r *resumeTrait) Apply(environment *trait.Environment) error {
 	if environment.IntegrationInPhase(v1.IntegrationPhaseInitialization) {
 		util.StringSliceUniqueAdd(&environment.Integration.Status.Capabilities, v1.CapabilityResume)
@@ -114,8 +100,7 @@ func (r *resumeTrait) Apply(environment *trait.Environment) error {
 		environment.ApplicationProperties["customizer.resume.enabled"] = "true"
 		environment.ApplicationProperties["customizer.resume.resumeStrategy"] = r.ResumeStrategy
 		environment.ApplicationProperties["customizer.resume.resumePath"] = r.ResumePath
-		environment.ApplicationProperties["customizer.resume.offsetKeyType"] = r.OffsetKeyType
-		environment.ApplicationProperties["customizer.resume.offsetValueType"] = r.OffsetValueType
+		environment.ApplicationProperties["customizer.resume.resumeServer"] = r.ResumeServer
 	}
 
 	return nil
