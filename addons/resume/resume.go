@@ -39,9 +39,11 @@ type resumeTrait struct {
 	ResumeStrategy string `property:"resume-strategy,omitempty"`
 	// The path used by the resume strategy (this is specific to the resume strategy type)
 	ResumePath string `property:"resume-path,omitempty"`
-	// The data type of the offset value
-	// The path used by the resume strategy (this is specific to the resume strategy type)
+	// The address of the resume server to use (protocol / implementation specific)
 	ResumeServer string `property:"resume-server,omitempty"`
+	// The adapter-specific policy to use when filling the cache (use: minimizing / maximizing). Check
+	// the component documentation if unsure
+	CacheFillPolicy string `property:"cache-fill-policy,omitempty"`
 }
 
 const (
@@ -101,6 +103,7 @@ func (r *resumeTrait) Apply(environment *trait.Environment) error {
 		environment.ApplicationProperties["customizer.resume.resumeStrategy"] = r.ResumeStrategy
 		environment.ApplicationProperties["customizer.resume.resumePath"] = r.ResumePath
 		environment.ApplicationProperties["customizer.resume.resumeServer"] = r.ResumeServer
+		environment.ApplicationProperties["customizer.resume.cacheFillPolicy"] = r.CacheFillPolicy
 	}
 
 	return nil
