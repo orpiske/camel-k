@@ -30,9 +30,9 @@ spec:
     provider: quarkus
     applicationClass: io.quarkus.bootstrap.runner.QuarkusEntryPoint
     metadata:
-      camel-quarkus.version: 2.9.0-SNAPSHOT
+      camel-quarkus.version: 2.10.0-SNAPSHOT
       camel.version: 3.18.0-SNAPSHOT
-      quarkus.version: 2.9.0.CR1
+      quarkus.version: 2.10.0.CR1
     dependencies:
     - groupId: org.apache.camel.k
       artifactId: camel-k-runtime
@@ -63,6 +63,10 @@ spec:
           artifactId: camel-quarkus-platform-http
         - groupId: org.apache.camel.quarkus
           artifactId: camel-quarkus-rest
+      resume:
+        dependencies:
+        - groupId: org.apache.camel.k
+          artifactId: camel-k-resume
       tracing:
         dependencies:
         - groupId: org.apache.camel.quarkus
@@ -89,6 +93,9 @@ spec:
     camel-k-master:
       groupId: org.apache.camel.k
       artifactId: camel-k-master
+    camel-k-resume:
+      groupId: org.apache.camel.k
+      artifactId: camel-k-resume
     camel-quarkus-activemq:
       groupId: org.apache.camel.quarkus
       artifactId: camel-quarkus-activemq
@@ -98,27 +105,6 @@ spec:
         passive: false
       javaTypes:
       - org.apache.camel.component.activemq.ActiveMQComponent
-    camel-quarkus-ahc:
-      groupId: org.apache.camel.quarkus
-      artifactId: camel-quarkus-ahc
-      schemes:
-      - id: ahc
-        http: true
-        passive: false
-      javaTypes:
-      - org.apache.camel.component.ahc.AhcComponent
-    camel-quarkus-ahc-ws:
-      groupId: org.apache.camel.quarkus
-      artifactId: camel-quarkus-ahc-ws
-      schemes:
-      - id: ahc-ws
-        http: true
-        passive: false
-      - id: ahc-wss
-        http: false
-        passive: false
-      javaTypes:
-      - org.apache.camel.component.ahc.ws.WsComponent
     camel-quarkus-amqp:
       groupId: org.apache.camel.quarkus
       artifactId: camel-quarkus-amqp
@@ -411,6 +397,15 @@ spec:
         passive: false
       javaTypes:
       - org.apache.camel.component.azure.eventhubs.EventHubsComponent
+    camel-quarkus-azure-key-vault:
+      groupId: org.apache.camel.quarkus
+      artifactId: camel-quarkus-azure-key-vault
+      schemes:
+      - id: azure-key-vault
+        http: false
+        passive: false
+      javaTypes:
+      - org.apache.camel.component.azure.key.vault.KeyVaultComponent
     camel-quarkus-azure-servicebus:
       groupId: org.apache.camel.quarkus
       artifactId: camel-quarkus-azure-servicebus
@@ -738,6 +733,13 @@ spec:
         passive: true
       javaTypes:
       - org.apache.camel.component.dataformat.DataFormatComponent
+    camel-quarkus-datasonnet:
+      groupId: org.apache.camel.quarkus
+      artifactId: camel-quarkus-datasonnet
+      languages:
+      - datasonnet
+      javaTypes:
+      - org.apache.camel.language.datasonnet.DatasonnetLanguage
     camel-quarkus-debezium-mongodb:
       groupId: org.apache.camel.quarkus
       artifactId: camel-quarkus-debezium-mongodb
@@ -2328,15 +2330,6 @@ spec:
         passive: false
       javaTypes:
       - org.apache.camel.component.solr.SolrComponent
-    camel-quarkus-spark:
-      groupId: org.apache.camel.quarkus
-      artifactId: camel-quarkus-spark
-      schemes:
-      - id: spark
-        http: false
-        passive: false
-      javaTypes:
-      - org.apache.camel.component.spark.SparkComponent
     camel-quarkus-splunk:
       groupId: org.apache.camel.quarkus
       artifactId: camel-quarkus-splunk
