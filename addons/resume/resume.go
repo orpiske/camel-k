@@ -19,6 +19,7 @@ package resume
 
 import (
 	v1 "github.com/apache/camel-k/pkg/apis/camel/v1"
+	traitv1 "github.com/apache/camel-k/pkg/apis/camel/v1/trait"
 	"github.com/apache/camel-k/pkg/metadata"
 	"github.com/apache/camel-k/pkg/trait"
 	"github.com/apache/camel-k/pkg/util"
@@ -32,8 +33,8 @@ import (
 // The Resume trait is disabled by default.
 //
 // +camel-k:trait=resume.
-type resumeTrait struct {
-	trait.BaseTrait `property:",squash"`
+type Trait struct {
+	traitv1.Trait `property:",squash" json:",inline"`
 	// Enables automatic configuration of the trait.
 	Auto *bool `property:"auto" json:"auto,omitempty"`
 	// The type of the resume strategy to use
@@ -45,6 +46,11 @@ type resumeTrait struct {
 	// The adapter-specific policy to use when filling the cache (use: minimizing / maximizing). Check
 	// the component documentation if unsure
 	CacheFillPolicy string `property:"cache-fill-policy,omitempty"`
+}
+
+type resumeTrait struct {
+	trait.BaseTrait `property:",squash"`
+	Trait           `property:",squash"`
 }
 
 const (
@@ -61,10 +67,6 @@ func NewResumeTrait() trait.Trait {
 }
 
 func (r *resumeTrait) Configure(environment *trait.Environment) (bool, error) {
-	if !pointer.BoolDeref(r.Enabled, false) {
-		return false, nil
-	}
-
 	if !environment.IntegrationInPhase(v1.IntegrationPhaseInitialization) && !environment.IntegrationInRunningPhases() {
 		return false, nil
 	}

@@ -41,7 +41,7 @@ const (
 	LocalRepository = "/tmp/artifacts/m2"
 
 	// ImageName --
-	ImageName = "localhost:5000/apache/camel-k"
+	ImageName = "docker.io/apache/camel-k"
 
 	// installDefaultKamelets --
 	installDefaultKamelets = true
