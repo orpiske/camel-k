@@ -63,6 +63,10 @@ spec:
           artifactId: camel-quarkus-platform-http
         - groupId: org.apache.camel.quarkus
           artifactId: camel-quarkus-rest
+      resume:
+        dependencies:
+        - groupId: org.apache.camel.k
+          artifactId: camel-k-resume
       tracing:
         dependencies:
         - groupId: org.apache.camel.quarkus
@@ -89,6 +93,9 @@ spec:
     camel-k-master:
       groupId: org.apache.camel.k
       artifactId: camel-k-master
+    camel-k-resume:
+      groupId: org.apache.camel.k
+      artifactId: camel-k-resume
     camel-quarkus-activemq:
       groupId: org.apache.camel.quarkus
       artifactId: camel-quarkus-activemq
